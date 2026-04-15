@@ -5,84 +5,64 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
 const AIRALO_BASE_URL = "https://partners-api.airalo.com";
 
-// Get Airalo access token
-async function getAiraloAccessToken() {
-  const clientId = process.env.AIRALO_CLIENT_ID;
-  const clientSecret = process.env.AIRALO_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Missing AIRALO_CLIENT_ID or AIRALO_CLIENT_SECRET");
-  }
-
+// 🔐 Get Airalo token
+async function getAiraloToken() {
   const response = await axios.post(
     ${AIRALO_BASE_URL}/v2/token,
     {
-      client_id: clientId,
-      client_secret: clientSecret
+      client_id: process.env.AIRALO_CLIENT_ID,
+      client_secret: process.env.AIRALO_CLIENT_SECRET
     },
     {
       headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        Accept: "application/json"
       }
     }
   );
 
-  const token =
-    response.data?.data?.access_token ||
-    response.data?.access_token ||
-    response.data?.token;
-
-  if (!token) {
-    throw new Error("Airalo token not returned");
-  }
-
-  return token;
+  return response.data.data.access_token;
 }
 
+// 🌐 Test route
 app.get("/", (req, res) => {
-  res.json({
-    ok: true,
-    message: "VoxDigits Airalo backend live"
-  });
+  res.json({ ok: true, message: "Airalo backend live" });
 });
 
-app.get("/health", (req, res) => {
-  res.status(200).send("ok");
-});
-
-// Fetch packages
+// 📦 Get packages
 app.get("/packages", async (req, res) => {
   try {
-    const token = await getAiraloAccessToken();
+    const token = await getAiraloToken();
 
-    const response = await axios.get(${AIRALO_BASE_URL}/v2/packages, {
-      headers: {
-        Accept: "application/json",
-        Authorization: Bearer ${token},
-        url: AIRALO_BASE_URL
+    const response = await axios.get(
+      ${AIRALO_BASE_URL}/v2/packages,
+      {
+        headers: {
+          Authorization: Bearer ${token},
+          Accept: "application/json"
+        }
       }
-    });
+    );
 
     res.json({
       ok: true,
       data: response.data
     });
+
   } catch (err) {
-    console.error("Airalo packages error:", err.response?.data || err.message);
+    console.error(err.response?.data || err.message);
 
     res.status(500).json({
       ok: false,
-      error: "Failed to fetch Airalo packages",
-      details: err.response?.data || err.message
+      error: "Failed to fetch packages"
     });
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("VoxDigits Airalo backend live on port " + PORT);
+// 🚀 Start server
+app.listen(PORT, () => {
+  console.log(Server running on port ${PORT});
 });
